@@ -1,0 +1,169 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #fbf8f3;
+  --foreground: #14100b;
+  --card: #ffffff;
+  --card-foreground: #14100b;
+  --border: #e6e0d5;
+  --muted: #f5f0e8;
+  --muted-foreground: #645b50;
+  --primary: #FF671F;
+  --primary-foreground: #ffffff;
+  --secondary: #14100b;
+  --secondary-foreground: #ffffff;
+  --input: #ffffff;
+  --placeholder: #8c827a;
+  --hover: #f5f0e8;
+  --focus: #FF671F;
+  --success: #0b6623;
+  --warning: #d97706;
+  --error: #dc2626;
+
+  --saffron: #FF671F;
+  --saffron-hover: #e5530f;
+  --ink: #14100b;
+  --cream: #fbf8f3;
+  --cream2: #f5f0e8;
+  --paper: #ffffff;
+  --line: #e6e0d5;
+  --event-green: #0b6623;
+  --event-green-deep: #074d1a;
+  --navy: #16212C;
+  --event-muted: #645b50;
+}
+
+.dark {
+  --background: #16212C;
+  --foreground: #f1ede6;
+  --card: #16212C;
+  --card-foreground: #f1ede6;
+  --border: #223040;
+  --muted: #16212C;
+  --muted-foreground: #9ba6b5;
+  --primary: #FF671F;
+  --primary-foreground: #ffffff;
+  --secondary: #f1ede6;
+  --secondary-foreground: #14100b;
+  --input: #16212C;
+  --placeholder: #627285;
+  --hover: #1c2736;
+  --focus: #FF671F;
+  --success: #15803d;
+  --warning: #f59e0b;
+  --error: #ef4444;
+
+  --cream: #16212C;
+  --cream2: #16212C;
+  --paper: #16212C;
+  --line: #223040;
+  --ink: #f1ede6;
+  --event-muted: #9ba6b5;
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+@layer components {
+  .section-eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: #FF671F;
+  }
+
+  .font-mono-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .hack-btn-primary {
+    font-family: 'Space Grotesk', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    background-color: #FF671F;
+    padding: 0.875rem 1.5rem;
+    font-size: 15px;
+    font-weight: 600;
+    color: #ffffff;
+    transition: all 0.2s;
+  }
+  .hack-btn-primary:hover {
+    background-color: #e5530f;
+  }
+
+  .hack-btn-secondary {
+    font-family: 'Space Grotesk', sans-serif;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+    padding: 0.875rem 1.5rem;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--foreground);
+    transition: all 0.2s;
+  }
+  .hack-btn-secondary:hover {
+    background-color: var(--foreground);
+    color: var(--background);
+  }
+
+  .hack-card {
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    color: var(--card-foreground);
+    transition: all 0.2s;
+  }
+  .hack-card:hover {
+    border-color: #FF671F;
+  }
+}
+
+/* Hide scrollbars project-wide across all browsers (Chrome, Edge, Safari, Firefox, Opera) */
+html,
+body,
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+*::-webkit-scrollbar,
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+::-webkit-scrollbar {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+/* Respect user preference for reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

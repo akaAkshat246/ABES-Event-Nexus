@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/assets/abes-logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ABES Event Nexus | ABES Engineering College, Ghaziabad (Autonomous)</title>
+    <meta
+      name="description"
+      content="India's Premier Campus Hackathon & Club Platform for ABES Engineering College, Ghaziabad. Discover, compete, and build across 19 premier student clubs and societies."
+    />
+    <!-- Automatic Time-Based Theme: 7:00 AM to 6:59:59 PM Light, 7:00 PM to 6:59:59 AM Dark -->
+    <script>
+      (function () {
+        try {
+          var override = sessionStorage.getItem('abes_theme_manual_override');
+          var isDark;
+          if (override === 'dark') {
+            isDark = true;
+          } else if (override === 'light') {
+            isDark = false;
+          } else {
+            var h = new Date().getHours();
+            isDark = !(h >= 7 && h < 19);
+          }
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            document.documentElement.style.colorScheme = 'dark';
+            document.documentElement.setAttribute('data-theme', 'dark');
+          } else {
+            document.documentElement.classList.remove('dark');
+            document.documentElement.style.colorScheme = 'light';
+            document.documentElement.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <!-- Modern Typography: Space Grotesk, Instrument Serif, IBM Plex Mono, Plus Jakarta Sans, Alex Brush, Great Vibes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Cinzel+Decorative:wght@700&family=Great+Vibes&family=IBM+Plex+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body class="bg-[#fbf8f3] dark:bg-[#16212C] text-[#14100b] dark:text-[#f1ede6] font-sans antialiased selection:bg-[#FF671F] selection:text-white min-h-screen transition-colors duration-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

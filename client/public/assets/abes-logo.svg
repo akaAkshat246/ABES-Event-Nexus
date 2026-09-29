@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 540 180" width="540" height="180">
+  <defs>
+    <linearGradient id="shieldMaroon" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#801826" />
+      <stop offset="100%" stop-color="#4E0C16" />
+    </linearGradient>
+    <linearGradient id="goldSun" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA800" />
+      <stop offset="100%" stop-color="#E58500" />
+    </linearGradient>
+    <filter id="dropGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Left Shield Crest -->
+  <g transform="translate(18, 12)">
+    <!-- Shield Border & Body -->
+    <path d="M 12 10 L 128 10 L 128 92 C 128 135, 70 156, 70 156 C 70 156, 12 135, 12 92 Z" 
+          fill="url(#shieldMaroon)" stroke="#505050" stroke-width="2.5" filter="url(#dropGlow)" />
+
+    <!-- Shield Inner Frame Header Line -->
+    <line x1="12" y1="52" x2="128" y2="52" stroke="#2B060C" stroke-width="3" />
+
+    <!-- ABES Text in Shield -->
+    <text x="70" y="42" font-family="'Times New Roman', Georgia, serif" font-size="34" font-weight="900" fill="#FFA800" text-anchor="middle" letter-spacing="1.5">ABES</text>
+
+    <!-- Sunburst Circle & Aztec Pattern -->
+    <g transform="translate(70, 102)">
+      <!-- Outer Aztec Gear Circle -->
+      <circle cx="0" cy="0" r="36" fill="none" stroke="#FFA800" stroke-width="4.5" stroke-dasharray="7 5" stroke-linecap="square" />
+      <!-- Sun Core -->
+      <circle cx="0" cy="0" r="26" fill="url(#goldSun)" />
+
+      <!-- Open Book / Lotus Blossom Graphic -->
+      <g transform="translate(0, 3) scale(0.9)">
+        <!-- Book Pages -->
+        <path d="M -16 6 C -10 1, -2 3, 0 8 C 2 3, 10 1, 16 6 C 10 12, 0 14, 0 8 C 0 14, -10 12, -16 6 Z" fill="#801826" />
+        <path d="M -16 1 C -10 -4, -2 -2, 0 3 C 2 -2, 10 -4, 16 1 C 10 7, 0 9, 0 3 C 0 9, -10 7, -16 1 Z" fill="#FFA800" stroke="#801826" stroke-width="0.8" />
+        <!-- Central Flame/Lotus Petal -->
+        <path d="M 0 -14 C -4 -7, -4 -2, 0 4 C 4 -2, 4 -7, 0 -14 Z" fill="#801826" />
+        <!-- Side Lotus Petals -->
+        <path d="M -7 -10 C -10 -4, -8 0, 0 4 C -4 -2, -5 -7, -7 -10 Z" fill="#801826" />
+        <path d="M 7 -10 C 10 -4, 8 0, 0 4 C 4 -2, 5 -7, 7 -10 Z" fill="#801826" />
+      </g>
+    </g>
+
+    <!-- Estd. 2000 Under Shield -->
+    <text x="70" y="174" font-family="'Plus Jakarta Sans', 'Space Grotesk', sans-serif" font-size="12" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">Estd. 2000</text>
+  </g>
+
+  <!-- Right Typography Section -->
+  <g transform="translate(175, 20)">
+    <!-- ABES Main Large Serif -->
+    <text x="0" y="78" font-family="'Times New Roman', 'Instrument Serif', Georgia, serif" font-size="88" font-weight="900" fill="#FFFFFF" letter-spacing="2">ABES</text>
+
+    <!-- Engineering College -->
+    <text x="4" y="112" font-family="'Plus Jakarta Sans', 'Space Grotesk', sans-serif" font-size="34" font-weight="800" fill="#FFFFFF" letter-spacing="0.2">Engineering College</text>
+
+    <!-- Thin Maroon Separator Line -->
+    <line x1="4" y1="124" x2="350" y2="124" stroke="#801826" stroke-width="2" />
+
+    <!-- (Autonomous College) -->
+    <text x="175" y="148" font-family="'Plus Jakarta Sans', 'Space Grotesk', sans-serif" font-size="21" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.4">(Autonomous College)</text>
+  </g>
+</svg>

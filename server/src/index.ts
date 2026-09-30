@@ -6,6 +6,8 @@ import cors from 'cors';
 import morgan from 'morgan';
 import { connectDB } from './config/db';
 import apiRoutes from './routes';
+import authRoutes from './routes/authRoutes';
+import { googleCallback, googleRedirect } from './controllers/authController';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
@@ -53,6 +55,17 @@ app.get('/', (_req: Request, res: Response) => {
   });
 });
 
+// Direct OAuth callback and redirect route aliases for any external/Google callback URL formats
+app.use('/auth', authRoutes);
+app.get('/google', googleRedirect);
+app.get('/google/callback', googleCallback);
+app.get('/auth/google', googleRedirect);
+app.get('/auth/google/callback', googleCallback);
+app.get('/auth/callback', googleCallback);
+app.get('/callback', googleCallback);
+app.get('/api/google/callback', googleCallback);
+app.get('/api/google', googleRedirect);
+
 // API Routes
 app.use('/api', apiRoutes);
 
@@ -60,7 +73,7 @@ app.use('/api', apiRoutes);
 app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
     success: false,
-    message: `Cannot ${req.method} ${req.originalUrl}`,
+    message: `Route not found: Cannot ${req.method} ${req.originalUrl}`,
   });
 });
 

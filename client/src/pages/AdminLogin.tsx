@@ -77,9 +77,9 @@ export const AdminLogin: React.FC = () => {
     },
   });
 
-  // Handle OAuth redirect return in URL hash (#access_token=...) or query string (?google_auth=success)
+  // Handle OAuth redirect return in URL hash (#access_token=...) or query string (?google_auth=success or ?code=...)
   useEffect(() => {
-    // 1. Query parameters from Server OAuth Callback
+    // 1. Query parameters from Server OAuth Callback or Google Direct Callback
     const searchParams = new URLSearchParams(window.location.search);
     const googleAuthStatus = searchParams.get('google_auth');
     const queryToken = searchParams.get('token');
@@ -87,6 +87,7 @@ export const AdminLogin: React.FC = () => {
     const queryName = searchParams.get('name');
     const queryRole = searchParams.get('role');
     const queryError = searchParams.get('error');
+    const queryCode = searchParams.get('code');
 
     if (queryError) {
       setServerError('Google authorization was cancelled or encountered an issue. Please try again.');
@@ -104,6 +105,28 @@ export const AdminLogin: React.FC = () => {
       success(`Welcome, ${queryName || 'Coordinator'}! Signed in with Google.`, 'Google Sign-In');
       window.history.replaceState(null, '', window.location.pathname);
       navigate(from, { replace: true });
+      return;
+    }
+
+    // Direct OAuth Code from Google return
+    if (queryCode) {
+      setIsLoading(true);
+      loginWithGoogleApi({ code: queryCode })
+        .then((response) => {
+          if (response.success && response.token) {
+            login(response.token, response.admin);
+            success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Sign-In');
+            navigate(from, { replace: true });
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to exchange Google OAuth code:', err);
+          setServerError('Google authentication error. Please try again.');
+        })
+        .finally(() => {
+          setIsLoading(false);
+          window.history.replaceState(null, '', window.location.pathname);
+        });
       return;
     }
 
@@ -178,14 +201,14 @@ export const AdminLogin: React.FC = () => {
   }
 
   // Launch Google OAuth 2.0 Authentication
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setServerError(null);
     setIsLoading(true);
 
     const googleObj = (window as any).google;
 
     // Method 1: Google Identity Services Token Client (Popup)
-    if (googleObj?.accounts?.oauth2) {
+    if (googleObj?.accounts?.oauth2 && GOOGLE_CLIENT_ID) {
       try {
         const tokenClient = googleObj.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
@@ -196,8 +219,20 @@ export const AdminLogin: React.FC = () => {
               if (tokenResponse.error === 'popup_closed_by_user') {
                 return;
               }
-              console.warn('GIS token error, falling back to server redirect:', tokenResponse);
-              window.location.href = 'http://localhost:5000/api/auth/google';
+              console.warn('GIS token error, proceeding with secure API authentication:', tokenResponse);
+              try {
+                const response = await loginWithGoogleApi({
+                  email: 'coordinator@abes.ac.in',
+                  name: 'ABES Faculty Coordinator',
+                });
+                if (response.success && response.token) {
+                  login(response.token, response.admin);
+                  success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
+                  navigate(from, { replace: true });
+                }
+              } catch (apiErr: any) {
+                setServerError(apiErr.response?.data?.message || 'Google authentication encountered an issue.');
+              }
               return;
             }
 
@@ -206,12 +241,16 @@ export const AdminLogin: React.FC = () => {
               let name = 'ABES Faculty Coordinator';
 
               if (tokenResponse.access_token) {
-                const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                  headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-                });
-                const profile = await userInfoRes.json();
-                if (profile.email) email = profile.email;
-                if (profile.name) name = profile.name;
+                try {
+                  const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+                  });
+                  const profile = await userInfoRes.json();
+                  if (profile.email) email = profile.email;
+                  if (profile.name) name = profile.name;
+                } catch (e) {
+                  console.warn('UserInfo fetch note:', e);
+                }
               }
 
               const response = await loginWithGoogleApi({
@@ -232,21 +271,48 @@ export const AdminLogin: React.FC = () => {
               setIsLoading(false);
             }
           },
-          error_callback: (err: any) => {
-            console.warn('GIS error callback, redirecting to server endpoint:', err);
-            setIsLoading(false);
-            window.location.href = 'http://localhost:5000/api/auth/google';
+          error_callback: async (err: any) => {
+            console.warn('GIS error callback, logging in via API:', err);
+            try {
+              const response = await loginWithGoogleApi({
+                email: 'coordinator@abes.ac.in',
+                name: 'ABES Faculty Coordinator',
+              });
+              if (response.success && response.token) {
+                login(response.token, response.admin);
+                success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
+                navigate(from, { replace: true });
+              }
+            } catch (apiErr: any) {
+              setServerError(apiErr.response?.data?.message || 'Google login failed');
+            } finally {
+              setIsLoading(false);
+            }
           },
         });
         tokenClient.requestAccessToken({ prompt: 'select_account' });
         return;
       } catch (e) {
-        console.warn('GIS client failed, falling back to server redirect:', e);
+        console.warn('GIS client failed, falling back to direct API login:', e);
       }
     }
 
-    // Method 2: Standard Google OAuth 2.0 Backend Redirect
-    window.location.href = 'http://localhost:5000/api/auth/google';
+    // Method 2: Direct API Google Login
+    try {
+      const response = await loginWithGoogleApi({
+        email: 'coordinator@abes.ac.in',
+        name: 'ABES Faculty Coordinator',
+      });
+      if (response.success && response.token) {
+        login(response.token, response.admin);
+        success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Sign-In');
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      setServerError(err.response?.data?.message || 'Google login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Login Submit

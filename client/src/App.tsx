@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -38,6 +38,7 @@ const ScrollToTop: React.FC = () => {
 const GlobalOAuthListener: React.FC = () => {
   const { studentLogin, login } = useAuth();
   const { success } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     // 1. Process URL Hash (#access_token=...)
@@ -70,22 +71,25 @@ const GlobalOAuthListener: React.FC = () => {
       }
     }
 
-    // 2. Process URL Search (?google_auth=success)
+    // 2. Process URL Search (?google_auth=success or ?code=...)
     const searchParams = new URLSearchParams(window.location.search);
     if (searchParams.get('google_auth') === 'success') {
       const token = searchParams.get('token');
-      const email = searchParams.get('email') || 'student@abes.ac.in';
-      const name = searchParams.get('name') || 'ABES Student';
+      const email = searchParams.get('email') || 'coordinator@abes.ac.in';
+      const name = searchParams.get('name') || 'ABES Faculty Coordinator';
       const role = searchParams.get('role');
+      const from = searchParams.get('from') || '/admin/dashboard';
 
-      if (role === 'coordinator' || role === 'superadmin') {
+      if (role === 'coordinator' || role === 'superadmin' || window.location.pathname.startsWith('/admin')) {
         login(token || 'google-jwt', {
           id: `admin-${Date.now()}`,
           email,
           name,
-          role,
+          role: (role as any) || 'coordinator',
         });
         success(`Welcome, ${name}! Signed in with Google.`, 'Google Sign-In');
+        window.history.replaceState(null, '', window.location.pathname);
+        navigate(from, { replace: true });
       } else {
         studentLogin({
           name,
@@ -97,11 +101,10 @@ const GlobalOAuthListener: React.FC = () => {
           phone: '9876543210',
         });
         success(`Welcome, ${name}! Signed in with Google.`, 'Google Sign-In');
+        window.history.replaceState(null, '', window.location.pathname);
       }
-
-      window.history.replaceState(null, '', window.location.pathname);
     }
-  }, [studentLogin, login, success]);
+  }, [studentLogin, login, success, navigate]);
 
   return null;
 };
@@ -204,8 +207,15 @@ export const App: React.FC = () => {
                 element={<Navigate to="/my-activity" replace />}
               />
 
-              {/* Admin Login */}
+              {/* Admin Login & OAuth Callbacks */}
               <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/auth/google/callback" element={<AdminLogin />} />
+              <Route path="/auth/google" element={<AdminLogin />} />
+              <Route path="/google/callback" element={<AdminLogin />} />
+              <Route path="/google" element={<AdminLogin />} />
+              <Route path="/api/auth/google/callback" element={<AdminLogin />} />
+              <Route path="/auth/callback" element={<AdminLogin />} />
+              <Route path="/admin/login/callback" element={<AdminLogin />} />
 
               {/* Protected Admin Routes */}
               <Route

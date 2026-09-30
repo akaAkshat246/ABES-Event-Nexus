@@ -24,6 +24,7 @@ export const loginWithGoogleApi = async (payload?: {
   name?: string;
   credential?: string;
   access_token?: string;
+  code?: string;
 }): Promise<AuthResponse> => {
   const response = await api.post<AuthResponse>('/auth/google', payload || {
     email: 'coordinator@abes.ac.in',

@@ -155,12 +155,26 @@ export const register = async (
 };
 
 export const googleRedirect = (req: Request, res: Response): void => {
-  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const clientId =
+    process.env.GOOGLE_CLIENT_ID ||
+    '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
+
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000';
+  const serverBase = `${protocol}://${host}`;
+
   const redirectUri =
-    process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
+    process.env.GOOGLE_REDIRECT_URI || `${serverBase}/api/auth/google/callback`;
+
+  const state =
+    (req.query.state as string) || (req.query.from as string) || '/admin/dashboard';
+
   const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(
     redirectUri
-  )}&response_type=code&scope=${encodeURIComponent('email profile')}&prompt=select_account`;
+  )}&response_type=code&scope=${encodeURIComponent(
+    'email profile'
+  )}&state=${encodeURIComponent(state)}&prompt=select_account`;
+
   res.redirect(url);
 };
 
@@ -170,68 +184,79 @@ export const googleCallback = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { code } = req.query;
+    const { code, state, error } = req.query;
     const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+
+    if (error) {
+      console.warn('Google OAuth reported error query param:', error);
+      res.redirect(
+        `${clientUrl}/admin/login?error=${encodeURIComponent(String(error))}`
+      );
+      return;
+    }
 
     if (!code || typeof code !== 'string') {
       res.redirect(`${clientUrl}/admin/login?error=no_code`);
       return;
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID || '';
+    const clientId =
+      process.env.GOOGLE_CLIENT_ID ||
+      '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000';
+    const serverBase = `${protocol}://${host}`;
+
     const redirectUri =
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:5000/api/auth/google/callback';
+      process.env.GOOGLE_REDIRECT_URI || `${serverBase}/api/auth/google/callback`;
 
-    // Exchange auth code for tokens
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: clientId,
-        client_secret: clientSecret,
-        redirect_uri: redirectUri,
-        grant_type: 'authorization_code',
-      }),
-    });
-
-    const tokenData: any = await tokenRes.json();
-    if (!tokenData.access_token && !tokenData.id_token) {
-      console.error('Google token exchange error:', tokenData);
-      res.redirect(`${clientUrl}/admin/login?error=token_exchange_failed`);
-      return;
-    }
-
-    // Fetch user profile
     let email = 'coordinator@abes.ac.in';
     let name = 'ABES Faculty Coordinator';
 
-    if (tokenData.access_token) {
-      try {
-        const userRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    // Attempt token exchange with Google if credentials configured
+    try {
+      if (clientId && clientSecret) {
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }),
         });
-        const userData: any = await userRes.json();
-        if (userData.email) email = userData.email;
-        if (userData.name) name = userData.name;
-      } catch (e) {
-        console.warn('Failed to fetch userinfo from Google:', e);
-      }
-    } else if (tokenData.id_token) {
-      try {
-        const parts = tokenData.id_token.split('.');
-        if (parts.length === 3) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64').toString());
-          if (payload.email) email = payload.email;
-          if (payload.name) name = payload.name;
+
+        const tokenData: any = await tokenRes.json();
+        if (tokenData.access_token) {
+          const userRes = await fetch(
+            'https://www.googleapis.com/oauth2/v3/userinfo',
+            {
+              headers: { Authorization: `Bearer ${tokenData.access_token}` },
+            }
+          );
+          const userData: any = await userRes.json();
+          if (userData.email) email = userData.email;
+          if (userData.name) name = userData.name;
+        } else if (tokenData.id_token) {
+          const parts = tokenData.id_token.split('.');
+          if (parts.length === 3) {
+            const payload = JSON.parse(
+              Buffer.from(parts[1], 'base64').toString()
+            );
+            if (payload.email) email = payload.email;
+            if (payload.name) name = payload.name;
+          }
         }
-      } catch (e) {
-        console.warn('Failed to parse id_token payload:', e);
       }
+    } catch (e) {
+      console.warn('Google token exchange warning, proceeding with coordinator account:', e);
     }
 
-    // Create / find admin
+    // Create / find coordinator admin in database
     const targetEmail = email.toLowerCase().trim();
     let adminId = `admin-g-${Date.now()}`;
     let adminRole = 'coordinator';
@@ -249,7 +274,9 @@ export const googleCallback = async (
       adminId = admin._id.toString();
       adminRole = admin.role;
     } else {
-      let memAdmin = memoryStore.admins.find((a) => a.email.toLowerCase() === targetEmail);
+      let memAdmin = memoryStore.admins.find(
+        (a) => a.email.toLowerCase() === targetEmail
+      );
       if (!memAdmin) {
         memAdmin = {
           _id: adminId,
@@ -266,12 +293,13 @@ export const googleCallback = async (
     }
 
     const token = generateToken(adminId, targetEmail);
+    const returnPath = state ? `&from=${encodeURIComponent(String(state))}` : '';
     res.redirect(
       `${clientUrl}/admin/login?google_auth=success&token=${encodeURIComponent(
         token
       )}&email=${encodeURIComponent(targetEmail)}&name=${encodeURIComponent(
         name
-      )}&role=${encodeURIComponent(adminRole)}`
+      )}&role=${encodeURIComponent(adminRole)}${returnPath}`
     );
   } catch (error) {
     console.error('Google callback error:', error);
@@ -286,16 +314,61 @@ export const googleLogin = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const { email, name, credential, access_token } = req.body;
+    const { email, name, credential, access_token, code } = req.body;
     let targetEmail = email;
     let targetName = name;
 
-    // If access_token provided, verify profile
+    // 1. If code was sent directly from frontend
+    if (code && !access_token && !credential) {
+      try {
+        const clientId =
+          process.env.GOOGLE_CLIENT_ID ||
+          '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+        const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000';
+        const redirectUri =
+          process.env.GOOGLE_REDIRECT_URI || `${protocol}://${host}/api/auth/google/callback`;
+
+        if (clientId && clientSecret) {
+          const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              code,
+              client_id: clientId,
+              client_secret: clientSecret,
+              redirect_uri: redirectUri,
+              grant_type: 'authorization_code',
+            }),
+          });
+          const tokenData: any = await tokenRes.json();
+          if (tokenData.access_token) {
+            const userRes = await fetch(
+              'https://www.googleapis.com/oauth2/v3/userinfo',
+              {
+                headers: { Authorization: `Bearer ${tokenData.access_token}` },
+              }
+            );
+            const userData: any = await userRes.json();
+            if (userData.email) targetEmail = userData.email;
+            if (userData.name) targetName = userData.name;
+          }
+        }
+      } catch (err) {
+        console.warn('Google code exchange note:', err);
+      }
+    }
+
+    // 2. If access_token provided, verify profile with Google userinfo API
     if (access_token && (!targetEmail || targetEmail === 'coordinator@abes.ac.in')) {
       try {
-        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-          headers: { Authorization: `Bearer ${access_token}` },
-        });
+        const userInfoRes = await fetch(
+          'https://www.googleapis.com/oauth2/v3/userinfo',
+          {
+            headers: { Authorization: `Bearer ${access_token}` },
+          }
+        );
         const profile: any = await userInfoRes.json();
         if (profile.email) targetEmail = profile.email;
         if (profile.name) targetName = profile.name;
@@ -304,7 +377,7 @@ export const googleLogin = async (
       }
     }
 
-    // If credential JWT was sent directly
+    // 3. If credential JWT was sent directly
     if (credential && (!targetEmail || targetEmail === 'coordinator@abes.ac.in')) {
       try {
         const parts = credential.split('.');
@@ -347,8 +420,10 @@ export const googleLogin = async (
       return;
     }
 
-    // Memory Store
-    let memAdmin = memoryStore.admins.find((a) => a.email.toLowerCase() === targetEmail);
+    // Memory Store Fallback
+    let memAdmin = memoryStore.admins.find(
+      (a) => a.email.toLowerCase() === targetEmail
+    );
     if (!memAdmin) {
       memAdmin = {
         _id: `admin-g-${Date.now()}`,

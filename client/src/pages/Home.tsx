@@ -30,12 +30,61 @@ import {
   Clock,
   Calendar,
   MapPin,
+  ChevronLeft,
+  ChevronRight,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { IEvent, RegistrationConfirmation } from '../types';
 import { fetchEvents } from '../api/events';
 import { EventCard } from '../components/EventCard';
 import { RegistrationModal } from '../components/RegistrationModal';
 import { TicketModal } from '../components/TicketModal';
+
+const heroSlides = [
+  {
+    id: 'auditorium',
+    src: '/assets/campus/cyberquest-auditorium.jpg',
+    alt: 'ABES CyberQuest 2025 Main Auditorium Stage',
+    caption: 'Auditorium · CyberQuest 2025 Stage',
+    subcaption: 'Bhabha Hall, Block C',
+  },
+  {
+    id: 'appreciation-certificates',
+    src: '/assets/campus/appreciation-certificates.jpg',
+    alt: 'ABES Department of CSE - Appreciation Day 5.0 Coordination Certificates',
+    caption: 'Dept. of CSE · Appreciation Day 5.0 Coordination',
+    subcaption: 'Student Coordinator Honors & Recognition',
+  },
+  {
+    id: 'hackathon-arena',
+    src: '/assets/campus/campus-hack-collage.jpg',
+    alt: 'ABES Hackathon Coding Arena & Collaborative Labs',
+    caption: 'Aryabhata Block · Campus Hackathon Hub',
+    subcaption: '36-Hour Hackathon Arena',
+  },
+  {
+    id: 'club-council',
+    src: '/assets/campus/club-team-outdoors.jpg',
+    alt: 'ABES Student Societies Leadership & Outreach Meet',
+    caption: 'Amphitheatre · Student Society Leadership',
+    subcaption: 'Inter-Club Council Meet',
+  },
+  {
+    id: 'innovation-lab',
+    src: '/assets/campus/coding-lab-mentorship.jpg',
+    alt: 'ABES Innovation Lab & Software Development Mentorship',
+    caption: 'Kalpana Chawla Block · Innovation Lab',
+    subcaption: 'Algorithmic Mentorship Hub',
+  },
+  {
+    id: 'street-theatre',
+    src: '/assets/campus/nukkad-natak-courtyard.jpg',
+    alt: 'ABES Annual Street Theatre & Cultural Performance',
+    caption: 'Main Courtyard · Annual Cultural & Street Theatre',
+    subcaption: 'Youth Festival Arena',
+  },
+];
 
 export const Home: React.FC = () => {
   const [events, setEvents] = useState<IEvent[]>([]);
@@ -44,10 +93,48 @@ export const Home: React.FC = () => {
   const [confirmationTicket, setConfirmationTicket] = useState<RegistrationConfirmation | null>(null);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
+  // Hero carousel state
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [isSlidePaused, setIsSlidePaused] = useState(false);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+
   // FAQ accordion state
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const navigate = useNavigate();
+
+  // Auto-scroll hero carousel every 4.5 seconds
+  useEffect(() => {
+    if (isSlidePaused) return;
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isSlidePaused]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % heroSlides.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStartX(e.touches[0].clientX);
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const diff = touchStartX - touchEndX;
+    if (diff > 50) {
+      nextSlide();
+    } else if (diff < -50) {
+      prevSlide();
+    }
+    setTouchStartX(null);
+  };
 
   // Real-time dynamic clock timer (updates every second)
   useEffect(() => {
@@ -109,20 +196,104 @@ export const Home: React.FC = () => {
 
   return (
     <div className="space-y-0">
-      {/* 1. HERO PHOTO BANNER (Real ABES Campus Auditorium & Hackathon) */}
-      <section className="relative bg-[#14100b]">
-        <div className="relative h-[clamp(280px,36vw,520px)] w-full overflow-hidden">
-          <img
-            src="/assets/campus/cyberquest-auditorium.jpg"
-            alt="ABES CyberQuest 2025 Main Auditorium Stage"
-            className="w-full h-full object-cover object-center brightness-95"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#14100b]/40 via-transparent to-[#14100b]" />
-          <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6">
-            <span className="clay-pill px-3.5 py-1.5 bg-black/60 backdrop-blur-md text-white font-mono text-[11px] font-semibold border border-white/20 shadow-md inline-flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-saffron" />
-              <span>Auditorium · CyberQuest 2025 Stage</span>
-            </span>
+      {/* 1. HERO PHOTO BANNER CAROUSEL (Auto-scrolling with ABES Campus & Event Showcase) */}
+      <section
+        className="relative bg-[#14100b] select-none group"
+        onMouseEnter={() => setIsSlidePaused(true)}
+        onMouseLeave={() => setIsSlidePaused(false)}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        aria-label="ABES Campus Showcase Carousel"
+      >
+        <div className="relative h-[clamp(300px,40vw,560px)] w-full overflow-hidden">
+          {heroSlides.map((slide, index) => {
+            const isActive = index === currentSlide;
+            return (
+              <div
+                key={slide.id}
+                className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
+                  isActive
+                    ? 'opacity-100 scale-100 z-10'
+                    : 'opacity-0 scale-105 pointer-events-none z-0'
+                }`}
+              >
+                <img
+                  src={slide.src}
+                  alt={slide.alt}
+                  className="w-full h-full object-cover object-center brightness-95 transition-transform duration-[6000ms] ease-out"
+                  style={{
+                    transform: isActive ? 'scale(1.02)' : 'scale(1)',
+                  }}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                />
+                {/* Vignette gradients */}
+                <div className="absolute inset-0 bg-gradient-to-t from-[#14100b] via-black/25 to-black/40" />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/30 via-transparent to-black/30" />
+              </div>
+            );
+          })}
+
+          {/* Left Arrow Button */}
+          <button
+            onClick={prevSlide}
+            className="absolute left-3 sm:left-6 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-95 shadow-lg"
+            aria-label="Previous image"
+          >
+            <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+
+          {/* Right Arrow Button */}
+          <button
+            onClick={nextSlide}
+            className="absolute right-3 sm:right-6 top-1/2 -translate-y-1/2 z-20 p-2 sm:p-2.5 rounded-full bg-black/50 hover:bg-black/80 text-white/80 hover:text-white backdrop-blur-md border border-white/20 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 active:scale-95 shadow-lg"
+            aria-label="Next image"
+          >
+            <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+
+          {/* Bottom Overlay: Location Badge & Slide Indicator Dots */}
+          <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 z-20 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-3 pointer-events-none">
+            {/* Active Slide Info / Location Badge */}
+            <div className="pointer-events-auto flex items-center gap-2">
+              <span className="clay-pill px-3.5 py-1.5 bg-black/70 backdrop-blur-md text-white font-mono text-[11px] font-semibold border border-white/25 shadow-xl inline-flex items-center gap-2 animate-in fade-in duration-500">
+                <MapPin className="w-3.5 h-3.5 text-saffron shrink-0" />
+                <span>{heroSlides[currentSlide].caption}</span>
+                <span className="hidden md:inline text-white/50">·</span>
+                <span className="hidden md:inline text-white/80 text-[10px] font-normal">
+                  {heroSlides[currentSlide].subcaption}
+                </span>
+              </span>
+
+              {/* Pause/Play toggle indicator */}
+              <button
+                onClick={() => setIsSlidePaused(!isSlidePaused)}
+                className="pointer-events-auto p-1.5 rounded-full bg-black/60 hover:bg-black/80 text-white/80 hover:text-white border border-white/20 backdrop-blur-md transition-all text-xs"
+                title={isSlidePaused ? 'Resume auto-scroll' : 'Pause auto-scroll'}
+                aria-label={isSlidePaused ? 'Resume auto-scroll' : 'Pause auto-scroll'}
+              >
+                {isSlidePaused ? (
+                  <Play className="w-3 h-3 text-saffron fill-saffron" />
+                ) : (
+                  <Pause className="w-3 h-3 text-white" />
+                )}
+              </button>
+            </div>
+
+            {/* Slide Dots / Progress Indicators */}
+            <div className="pointer-events-auto flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 shadow-xl">
+              {heroSlides.map((slide, idx) => (
+                <button
+                  key={slide.id}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`transition-all duration-300 rounded-full ${
+                    idx === currentSlide
+                      ? 'w-6 h-2 bg-saffron shadow-sm'
+                      : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+                  }`}
+                  aria-label={`Go to slide ${idx + 1}: ${slide.caption}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>

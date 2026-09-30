@@ -201,7 +201,7 @@ export const AdminLogin: React.FC = () => {
   }
 
   // Launch Google OAuth 2.0 Authentication
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setServerError(null);
     setIsLoading(true);
 
@@ -212,33 +212,21 @@ export const AdminLogin: React.FC = () => {
       try {
         const tokenClient = googleObj.accounts.oauth2.initTokenClient({
           client_id: GOOGLE_CLIENT_ID,
-          scope: 'email profile',
+          scope: 'email profile openid',
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
-              setIsLoading(false);
               if (tokenResponse.error === 'popup_closed_by_user') {
+                setIsLoading(false);
                 return;
               }
-              console.warn('GIS token error, proceeding with secure API authentication:', tokenResponse);
-              try {
-                const response = await loginWithGoogleApi({
-                  email: 'coordinator@abes.ac.in',
-                  name: 'ABES Faculty Coordinator',
-                });
-                if (response.success && response.token) {
-                  login(response.token, response.admin);
-                  success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
-                  navigate(from, { replace: true });
-                }
-              } catch (apiErr: any) {
-                setServerError(apiErr.response?.data?.message || 'Google authentication encountered an issue.');
-              }
+              console.warn('GIS popup error, redirecting to server Google OAuth:', tokenResponse);
+              window.location.href = 'http://localhost:5000/api/auth/google';
               return;
             }
 
             try {
-              let email = 'coordinator@abes.ac.in';
-              let name = 'ABES Faculty Coordinator';
+              let email = '';
+              let name = '';
 
               if (tokenResponse.access_token) {
                 try {
@@ -254,8 +242,8 @@ export const AdminLogin: React.FC = () => {
               }
 
               const response = await loginWithGoogleApi({
-                email,
-                name,
+                email: email || undefined,
+                name: name || undefined,
                 access_token: tokenResponse.access_token,
               });
               if (response.success && response.token) {
@@ -271,48 +259,20 @@ export const AdminLogin: React.FC = () => {
               setIsLoading(false);
             }
           },
-          error_callback: async (err: any) => {
-            console.warn('GIS error callback, logging in via API:', err);
-            try {
-              const response = await loginWithGoogleApi({
-                email: 'coordinator@abes.ac.in',
-                name: 'ABES Faculty Coordinator',
-              });
-              if (response.success && response.token) {
-                login(response.token, response.admin);
-                success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
-                navigate(from, { replace: true });
-              }
-            } catch (apiErr: any) {
-              setServerError(apiErr.response?.data?.message || 'Google login failed');
-            } finally {
-              setIsLoading(false);
-            }
+          error_callback: (err: any) => {
+            console.warn('GIS error callback, redirecting to server Google OAuth:', err);
+            window.location.href = 'http://localhost:5000/api/auth/google';
           },
         });
         tokenClient.requestAccessToken({ prompt: 'select_account' });
         return;
       } catch (e) {
-        console.warn('GIS client failed, falling back to direct API login:', e);
+        console.warn('GIS client failed, redirecting to server Google OAuth:', e);
       }
     }
 
-    // Method 2: Direct API Google Login
-    try {
-      const response = await loginWithGoogleApi({
-        email: 'coordinator@abes.ac.in',
-        name: 'ABES Faculty Coordinator',
-      });
-      if (response.success && response.token) {
-        login(response.token, response.admin);
-        success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Sign-In');
-        navigate(from, { replace: true });
-      }
-    } catch (err: any) {
-      setServerError(err.response?.data?.message || 'Google login failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
+    // Method 2: Standard Google OAuth 2.0 Backend Redirect
+    window.location.href = 'http://localhost:5000/api/auth/google';
   };
 
   // Login Submit

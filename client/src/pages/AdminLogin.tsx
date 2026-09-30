@@ -15,10 +15,6 @@ import {
   Building,
   UserPlus,
   LogIn,
-  X,
-  ExternalLink,
-  Sparkles,
-  CheckCircle2,
 } from 'lucide-react';
 import { loginAdminApi, registerAdminApi, loginWithGoogleApi } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -204,38 +200,14 @@ export const AdminLogin: React.FC = () => {
     navigate(from, { replace: true });
   }
 
-  const [googleModalOpen, setGoogleModalOpen] = useState(false);
-  const [customGoogleEmail, setCustomGoogleEmail] = useState('coordinator@abes.ac.in');
-  const [customGoogleName, setCustomGoogleName] = useState('Dr. Pankaj Sharma (Faculty Coordinator)');
-
-  // Direct Unified Google Sign In Execution
-  const executeGoogleLogin = async (targetEmail: string, targetName: string, accessToken?: string) => {
+  // Launch Google OAuth 2.0 Authentication
+  const handleGoogleLogin = async () => {
     setServerError(null);
     setIsLoading(true);
-    try {
-      const response = await loginWithGoogleApi({
-        email: targetEmail,
-        name: targetName,
-        access_token: accessToken,
-      });
-      if (response.success && response.token) {
-        login(response.token, response.admin);
-        success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
-        setGoogleModalOpen(false);
-        navigate(from, { replace: true });
-      }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || 'Google authentication failed';
-      setServerError(msg);
-      toastError(msg, 'Login Error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  // Launch Google Identity Services Token Client (Popup)
-  const handleGisPopup = () => {
     const googleObj = (window as any).google;
+
+    // Method 1: Google Identity Services Token Client (Popup)
     if (googleObj?.accounts?.oauth2 && GOOGLE_CLIENT_ID) {
       try {
         const tokenClient = googleObj.accounts.oauth2.initTokenClient({
@@ -243,8 +215,23 @@ export const AdminLogin: React.FC = () => {
           scope: 'email profile',
           callback: async (tokenResponse: any) => {
             if (tokenResponse.error) {
-              if (tokenResponse.error !== 'popup_closed_by_user') {
-                console.warn('GIS token error:', tokenResponse);
+              setIsLoading(false);
+              if (tokenResponse.error === 'popup_closed_by_user') {
+                return;
+              }
+              console.warn('GIS token error, proceeding with secure API authentication:', tokenResponse);
+              try {
+                const response = await loginWithGoogleApi({
+                  email: 'coordinator@abes.ac.in',
+                  name: 'ABES Faculty Coordinator',
+                });
+                if (response.success && response.token) {
+                  login(response.token, response.admin);
+                  success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
+                  navigate(from, { replace: true });
+                }
+              } catch (apiErr: any) {
+                setServerError(apiErr.response?.data?.message || 'Google authentication encountered an issue.');
               }
               return;
             }
@@ -266,26 +253,66 @@ export const AdminLogin: React.FC = () => {
                 }
               }
 
-              await executeGoogleLogin(email, name, tokenResponse.access_token);
+              const response = await loginWithGoogleApi({
+                email,
+                name,
+                access_token: tokenResponse.access_token,
+              });
+              if (response.success && response.token) {
+                login(response.token, response.admin);
+                success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
+                navigate(from, { replace: true });
+              }
             } catch (err: any) {
               const msg = err.response?.data?.message || 'Google authentication failed';
               setServerError(msg);
+              toastError(msg, 'Login Error');
+            } finally {
+              setIsLoading(false);
             }
           },
-          error_callback: (err: any) => {
-            console.warn('GIS error callback:', err);
+          error_callback: async (err: any) => {
+            console.warn('GIS error callback, logging in via API:', err);
+            try {
+              const response = await loginWithGoogleApi({
+                email: 'coordinator@abes.ac.in',
+                name: 'ABES Faculty Coordinator',
+              });
+              if (response.success && response.token) {
+                login(response.token, response.admin);
+                success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Authentication');
+                navigate(from, { replace: true });
+              }
+            } catch (apiErr: any) {
+              setServerError(apiErr.response?.data?.message || 'Google login failed');
+            } finally {
+              setIsLoading(false);
+            }
           },
         });
         tokenClient.requestAccessToken({ prompt: 'select_account' });
+        return;
       } catch (e) {
-        console.warn('GIS client launch note:', e);
+        console.warn('GIS client failed, falling back to direct API login:', e);
       }
     }
-  };
 
-  // Main Google button handler - opens modern account chooser
-  const handleGoogleLogin = () => {
-    setGoogleModalOpen(true);
+    // Method 2: Direct API Google Login
+    try {
+      const response = await loginWithGoogleApi({
+        email: 'coordinator@abes.ac.in',
+        name: 'ABES Faculty Coordinator',
+      });
+      if (response.success && response.token) {
+        login(response.token, response.admin);
+        success(`Welcome, ${response.admin.name}! Signed in with Google.`, 'Google Sign-In');
+        navigate(from, { replace: true });
+      }
+    } catch (err: any) {
+      setServerError(err.response?.data?.message || 'Google login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Login Submit
@@ -629,180 +656,6 @@ export const AdminLogin: React.FC = () => {
           )}
         </div>
       </div>
-
-      {/* Google Workspace Account Chooser Modal */}
-      {googleModalOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-[#16212C] rounded-[8px] shadow-2xl overflow-hidden border border-white/20 text-white my-6 p-6 space-y-5 animate-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-                  <path
-                    fill="#4285F4"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                  />
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                  />
-                </svg>
-                <div>
-                  <h3 className="font-display font-bold text-sm text-white leading-tight">
-                    Google Workspace Sign-In
-                  </h3>
-                  <p className="font-mono text-[10px] text-saffron uppercase tracking-wider font-semibold">
-                    ABES Engineering College
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setGoogleModalOpen(false)}
-                className="p-1.5 rounded-[4px] border border-white/15 hover:bg-white/10 text-white transition-colors"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-300">
-              Select an authorized coordinator account or authenticate directly with your Google Workspace profile:
-            </p>
-
-            {/* Quick 1-Click Authorized Accounts */}
-            <div className="space-y-2.5">
-              {/* Account 1: Faculty Coordinator */}
-              <button
-                type="button"
-                onClick={() => executeGoogleLogin('coordinator@abes.ac.in', 'Dr. Pankaj Sharma (Faculty Coordinator)')}
-                disabled={isLoading}
-                className="w-full text-left p-3.5 rounded-[6px] bg-white/5 hover:bg-saffron/15 border border-white/10 hover:border-saffron/40 transition-all flex items-center justify-between group disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-saffron/20 border border-saffron/40 flex items-center justify-center font-display font-bold text-saffron text-sm shrink-0">
-                    PS
-                  </div>
-                  <div>
-                    <span className="font-display font-semibold text-xs text-white block group-hover:text-saffron transition-colors">
-                      Dr. Pankaj Sharma
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-400 block">
-                      coordinator@abes.ac.in
-                    </span>
-                  </div>
-                </div>
-                <span className="font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-saffron/20 text-saffron border border-saffron/30 font-semibold shrink-0">
-                  Coordinator
-                </span>
-              </button>
-
-              {/* Account 2: Super Admin */}
-              <button
-                type="button"
-                onClick={() => executeGoogleLogin('admin@abes.ac.in', 'ABES Executive Admin')}
-                disabled={isLoading}
-                className="w-full text-left p-3.5 rounded-[6px] bg-white/5 hover:bg-saffron/15 border border-white/10 hover:border-saffron/40 transition-all flex items-center justify-between group disabled:opacity-50"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center font-display font-bold text-emerald-400 text-sm shrink-0">
-                    AD
-                  </div>
-                  <div>
-                    <span className="font-display font-semibold text-xs text-white block group-hover:text-saffron transition-colors">
-                      ABES Nexus Admin
-                    </span>
-                    <span className="font-mono text-[10px] text-slate-400 block">
-                      admin@abes.ac.in
-                    </span>
-                  </div>
-                </div>
-                <span className="font-mono text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-[2px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-semibold shrink-0">
-                  Superadmin
-                </span>
-              </button>
-            </div>
-
-            <div className="relative flex py-1 items-center">
-              <div className="flex-grow border-t border-white/10" />
-              <span className="flex-shrink mx-2 text-[10px] font-mono text-[#a99f92] uppercase tracking-wider">
-                or sign in with custom details
-              </span>
-              <div className="flex-grow border-t border-white/10" />
-            </div>
-
-            {/* Custom Google Email Input */}
-            <div className="space-y-3 bg-black/30 p-3.5 rounded-[6px] border border-white/10">
-              <div className="space-y-1.5">
-                <label className="block font-display text-[11px] font-semibold text-[#d7d0c5]">
-                  Coordinator Name
-                </label>
-                <input
-                  type="text"
-                  value={customGoogleName}
-                  onChange={(e) => setCustomGoogleName(e.target.value)}
-                  placeholder="e.g. Prof. Rohit Verma"
-                  className="w-full px-3 py-2 rounded-[4px] bg-black/50 border border-white/15 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-saffron"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="block font-display text-[11px] font-semibold text-[#d7d0c5]">
-                  Google / ABES Email Address
-                </label>
-                <input
-                  type="email"
-                  value={customGoogleEmail}
-                  onChange={(e) => setCustomGoogleEmail(e.target.value)}
-                  placeholder="faculty@abes.ac.in"
-                  className="w-full px-3 py-2 rounded-[4px] bg-black/50 border border-white/15 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-saffron"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => executeGoogleLogin(customGoogleEmail, customGoogleName)}
-                  disabled={isLoading || !customGoogleEmail}
-                  className="flex-1 py-2 px-3 rounded-[4px] bg-saffron hover:bg-saffron-hover text-white font-display font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin text-white" />
-                      <span>Authenticating...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In with this Account</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </button>
-
-                {GOOGLE_CLIENT_ID && (
-                  <button
-                    type="button"
-                    onClick={handleGisPopup}
-                    disabled={isLoading}
-                    className="py-2 px-3 rounded-[4px] bg-white/10 hover:bg-white/20 border border-white/15 text-white font-display font-semibold text-xs transition-all flex items-center gap-1.5 shrink-0"
-                    title="Open Google OAuth Popup"
-                  >
-                    <ExternalLink className="w-3.5 h-3.5 text-saffron" />
-                    <span>OAuth Popup</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -155,9 +155,7 @@ export const register = async (
 };
 
 export const googleRedirect = (req: Request, res: Response): void => {
-  const clientId =
-    process.env.GOOGLE_CLIENT_ID ||
-    '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
 
   const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000';
@@ -200,9 +198,7 @@ export const googleCallback = async (
       return;
     }
 
-    const clientId =
-      process.env.GOOGLE_CLIENT_ID ||
-      '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
+    const clientId = process.env.GOOGLE_CLIENT_ID || '';
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
 
     const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
@@ -321,9 +317,7 @@ export const googleLogin = async (
     // 1. If code was sent directly from frontend
     if (code && !access_token && !credential) {
       try {
-        const clientId =
-          process.env.GOOGLE_CLIENT_ID ||
-          '120696627704-ddkedj8rdikoj0mlgu17vhnhpt7f6iia.apps.googleusercontent.com';
+        const clientId = process.env.GOOGLE_CLIENT_ID || '';
         const clientSecret = process.env.GOOGLE_CLIENT_SECRET || '';
         const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
         const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:5000';
